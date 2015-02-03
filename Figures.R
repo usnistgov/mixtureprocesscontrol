@@ -11,8 +11,8 @@ require(dplyr)||install.packages(dplyr)
 
 ##This code all runs off of count tables - these count tables should also be added to git (and have their locations in the code suitably refactored) -
 #current count table locations:
-# SEQC : ~/Desktop/MainSEQC/ subdirectories SEQC_MAIN_ILM_rawCounts_ZSu.2012_04_14 & SEQC_LifescopeCounts
-# BLM : ~/Downloads/RawData/BLM/Countdata #added as PAPERUSED.zip (but makerefmetdfb isn't quite fixed yet)
+# SEQC : #ILM data as
+# BLM :  #added as BLMgene.zip
 
 #Figure2:
 theme_set(theme_bw(base_size=18))
@@ -1025,7 +1025,7 @@ makeseqcdf<-function(SEQCcountpath="SEQCtranscript/"){
     fidf<-rbind(fidf,fdf)
   }#adds in the ILM sites
   for ( I in c("NWU","PSU","SQW")){
-    string<-paste("~/Desktop/MainSEQC/SEQC_LifescopeCounts/SEQC_LIF_",I,"_LifeScope.csv",sep="")
+    string<-paste(SEQCcountpath,~/Desktop/MainSEQC/SEQC_LifescopeCounts/"SEQC_LIF_",I,"_LifeScope.csv",sep="")
     fdf<-NULL
     tdf<-fread(string)
     tdf<-as.data.frame(tdf)
