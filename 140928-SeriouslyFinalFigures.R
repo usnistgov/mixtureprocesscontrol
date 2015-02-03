@@ -12,9 +12,9 @@ require(dplyr)||install.packages(dplyr)
 ##This code all runs off of count tables - these count tables should also be added to git (and have their locations in the code suitably refactored) -
 #current count table locations:
 # SEQC : ~/Desktop/MainSEQC/ subdirectories SEQC_MAIN_ILM_rawCounts_ZSu.2012_04_14 & SEQC_LifescopeCounts
-# BLM : ~/Downloads/RawData/BLM/Countdata
+# BLM : ~/Downloads/RawData/BLM/Countdata #added as PAPERUSED.zip (but makerefmetdfb isn't quite fixed yet)
 
-#Figure2:  
+#Figure2:
 theme_set(theme_bw(base_size=18))
 #a<-makeTargetPlot(type="BLM",df=makerefmetdfb(norm="UQN"))
 #a+coord_cartesian(ylim=c(0,0.75),xlim=c(0,0.75))+scale_x_continuous(breaks=c(0,0.25,0.5,0.75))+scale_y_continuous(breaks=c(0,0.25,0.5,0.75))
@@ -41,12 +41,12 @@ dendrogramplot<-function(testing=FALSE){
       a <- attributes(n)
       labCol <- labelColors[clusMember[which(names(clusMember) == a$label)]]
       attr(n, "nodePar") <- list(a$nodePar, lab.col = labCol, lab.cex=1.5)
-      
+
     }
     n
   }
   clusDendro = dendrapply(hcrd, colLab)
-  
+
   if(testing==TRUE){return(clusDendro)}
   # make plot
   output<-plot(clusDendro, main = "",axes=FALSE)
@@ -68,7 +68,7 @@ return(print(g+geom_point(data=subset(adf,identity!="unclassified"),aes(x=log2(a
 sf2a<-function(){
   gdfa<-(assignIdentity(makerefmetdfb(norm="UQN")))
   gdfa$plat<-"HiSeq"
-  gdfa$mrat<-calcmrnafrac(gdfa)[7]/calcmrnafrac(gdfa)[1] # since the plot is comparing A1 to A2, I take the ratio of their mrna fractions as a term to use later.  
+  gdfa$mrat<-calcmrnafrac(gdfa)[7]/calcmrnafrac(gdfa)[1] # since the plot is comparing A1 to A2, I take the ratio of their mrna fractions as a term to use later.
 
   gdfb<-assignIdentity(makerefmetdfb(norm=0,platform = "5500"))
   gdfb$plat<-"SOLiD 5500"
@@ -76,21 +76,21 @@ sf2a<-function(){
 #  rownames(gdfa)<-gdfa$gene_id;rownames(gdfb)<-gdfb$gene_id
   gdf<-rbind(gdfa,gdfb) #it's later now.
   gdf$pme[gdf$plat=="SOLiD 5500"]<-gdfb[,9]#/sum(gdfb[,9])*sum(gdfb[,2]) #this printme variable corresponds to B2 in the data, because yeah that is what's going on in the 5500 data - but is normalized by the library size.
-  gdf$pme[gdf$plat=="HiSeq"]<-gdfa[,8]#/sum(gdfa[,8])*sum(gdfa[,2]) #this "printme" variable is A2. because. A2 is what i want to look at for this dataset 
-  
+  gdf$pme[gdf$plat=="HiSeq"]<-gdfa[,8]#/sum(gdfa[,8])*sum(gdfa[,2]) #this "printme" variable is A2. because. A2 is what i want to look at for this dataset
+
   g<-ggplot(subset(gdf,identity!="unclassified"))
   g+geom_point(aes(y=log2(a1*mrat/pme),x=log2(a1/mrat*pme)/2,col=identity,size=identity))+facet_grid(. ~ plat)+scale_colour_manual(values=c("#CC6666","black","#99CC66","#6699CC"),labels=c("Brain","ERCC","Liver","Muscle"))+
     theme(legend.position=c(0.9,0.9))+labs(x="A",y=expression(paste(Log[2]," Ratio BLM-1 : BLM-2")))+scale_alpha_manual(values=c(0.7,1,0.7,0.7))+
     scale_size_manual(values=c(1.5,3,1.5,1.5),labels=c("Brain","ERCC","Liver","Muscle"))+theme(legend.title=element_blank())+theme(strip.background = element_rect(fill = 'white'))+
     scale_x_continuous(limits=c(0,20),expand=c(0,0))+scale_y_continuous(limits=c(-2,2),expand=c(0,0))+guides(colour=guide_legend(override.aes = list(size=4)))+theme(strip.text.x=element_text(size=24))+
-    theme(axis.title=element_text(size=24))+theme(axis.text=element_text(size=20))+geom_point(data=subset(gdf,identity=="external"),aes(y=log2(a1*mrat/pme),x=log2(a1/mrat*pme)/2,col=identity,size=identity))  
+    theme(axis.title=element_text(size=24))+theme(axis.text=element_text(size=20))+geom_point(data=subset(gdf,identity=="external"),aes(y=log2(a1*mrat/pme),x=log2(a1/mrat*pme)/2,col=identity,size=identity))
 }#no longer referred to in the paper
 sf4<-function(indf){
   require(reshape2)
   if(missing(indf)){
     indf<-makeseqcdf()}
   #do UQN for ILM sites:
-  indfILM<-subset(indf,!site%in%c("NWU","PSU","SQW")) #subset to ILM only  
+  indfILM<-subset(indf,!site%in%c("NWU","PSU","SQW")) #subset to ILM only
   indfILM$site<-droplevels(indfILM$site) #clear out those pesky empty factor levels
   indfILM<-normalizeSEQC(indfILM,type="Both")
   indfLT<-subset(indf,site%in%c("NWU","PSU","SQW"))
@@ -98,7 +98,7 @@ sf4<-function(indf){
   final<-NULL
   dset<-cbind(indf[,1:2],rowMeans(indf[,3:6]),rowMeans(indf[,7:10]),(indf[,11:14]),(indf[,15:18]))
   names(dset)<-c("gene_id","site","A","B","C","C","C","C","D","D","D","D")
-  
+
   for(I in levels(as.factor(dset$site))){
 
     modeled<-SEQClm(subset(indf,site==I))
@@ -114,7 +114,7 @@ sf4<-function(indf){
   require(dplyr)
   fmean<-group_by(final,method,site,variable)%>%summarise(mean(value),mean(dval),sd(value),sd(dval))
   names(fmean)<-c("method","site","variable","meanc","meand","sdc","sdd")
-  
+
   g<-ggplot(final)
   g+geom_point(aes(x=value,y=dval,color=(site),pch=method),alpha=0.65,size=4)+coord_cartesian(ylim=c(0.1,0.4),xlim=c(0.6,0.9))+
     facet_wrap(~ site)+ylab("Amount of SEQC-A in SEQC-C")+xlab("Amount of SEQC-A in SEQC-D")+geom_point(aes(x=0.75,y=0.25),col="grey70")+theme(legend.position="none")+
@@ -129,7 +129,7 @@ sf4<-function(indf){
 #Supplemental Figure3:
 sf3<-function(){figure<-makeTargetPlot(df=makerefmetdfb(norm="UQN",mapper="RSEM",method="RSEM",readtype="mostcomplex"),
                                df2 = makerefmetdfb(norm="UQN",mapper="RSEM",method="RSEM",readtype = "default"),Discriminator = "FPKM",numrings = 2)
-figure+scale_alpha_manual(name="Unit",breaks=c(0,1),labels=c("Count","FPKM"),values=c(0.3,1))}#Target plot: FPKM 
+figure+scale_alpha_manual(name="Unit",breaks=c(0,1),labels=c("Count","FPKM"),values=c(0.3,1))}#Target plot: FPKM
 #Supplemental Figure4:
 sf5<-function(indf){
   require(reshape2)
@@ -242,7 +242,7 @@ seqcmixmodeling<-function(SEQCDF=SEQCDF,nmethod="TMM",factor="ercc"){
     nflist<-rbind(nflist,fac)
     mflist<-rbind(mflist,calcmrnafrac(tmp,selection=c(3:18),e5="G"))
     SEQCDFN<-rbind(SEQCDFN,tmp)
-    
+
   }
   return(SEQCDFN)
 }
@@ -264,8 +264,8 @@ blmmixnormmodels<-function(normtype="TMM",factor="ercc"){
   }
   mixFrac1<-c(.25,.25,.5);mixFrac2<-c(.25,.5,.25)
   if(factor=="ercc"){fac<-calcmrnafrac(tmp)}
-  
-  
+
+
   tmp$pred1<-(tmp$bep*mixFrac1[1]*fac[11])+(tmp$lep*mixFrac1[2]*fac[12])+(tmp$mep*mixFrac1[3]*fac[13])
   tmp$pred2<-(tmp$bep*mixFrac2[1]*fac[11])+(tmp$lep*mixFrac2[2]*fac[12])+(tmp$mep*mixFrac2[3]*fac[13])
   tmp$pred1<-tmp$pred1/sum(tmp$pred1)*sum(tmp$a1)
@@ -325,7 +325,7 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
    mct<-paste("/Volumes/Archive2b/RawData/BLM/Countdata/",string,"/MCT.ct",sep="")
    if(file.exists(b1)==FALSE){if(file.exists(clct)==FALSE){return(0)}}##check to see if there is actually data to collect.  If not, don't throw an error.  How massive!
    if(length(grep("HTS",method))==1){
-     int<-fread(a1,sep="\t",select=1)     
+     int<-fread(a1,sep="\t",select=1)
      a1<-rowSums(fread(a1,sep="\t",drop=1))
      a1d<-rowSums(fread(a1d,sep="\t",drop=1))
      a1u<-rowSums(fread(a1u,sep="\t",drop=1))
@@ -339,7 +339,7 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
      bep<-rowSums(fread(bep,sep="\t",drop=1))
      lep<-rowSums(fread(lep,sep="\t",drop=1))
      mep<-rowSums(fread(mep,sep="\t",drop=1))
-     
+
    }#some specific bits to make input from hts
    else if(length(grep("LS",method))==1){
      if(platform=="5500"){
@@ -379,7 +379,7 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
      if(reps==1){
        int<-(fread(a1,sep="\t",select=1))
        a1<-(fread(a1,sep="\t",header=FALSE,select=8))
-       
+
        a1d<-(fread(a1d,sep="\t",header=FALSE,select=8))
        a1u<-(fread(a1u,sep="\t",header=FALSE,select=8))
        b1<-(fread(b1,sep="\t",header=FALSE,select=8))
@@ -445,7 +445,7 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
      }
    }#more specific bits for CUFF
    else if(method=="CLCT"){
-     
+
      if(mapper=="LS"){
        a1<-(fread(clct,sep="\t",header=TRUE,select=1))
        b1<-(fread(clct,sep="\t",header=TRUE,select=16))
@@ -461,7 +461,7 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        lep<-fread(lct,sep="\t",header=TRUE,select=6)
        mep<-fread(mct,sep="\t",header=TRUE,select=11)
        #idk what int should be here...do i have to recalibrate everything?
-       
+
      }
      else if(mapper=="TH"){
        if(platform=="ILLUMINA"){
@@ -477,7 +477,7 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
          b2u<-(fread(clct,sep="\t",header=TRUE,select=46))
          bep<-fread(bct,sep="\t",header=TRUE,select=1)
          lep<-fread(lct,sep="\t",header=TRUE,select=6)
-         mep<-fread(mct,sep="\t",header=TRUE,select=11)    
+         mep<-fread(mct,sep="\t",header=TRUE,select=11)
        }
        else if(platform=="5500"){
          a1<-(fread(clct,sep="\t",header=TRUE,select=1))
@@ -492,8 +492,8 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
          b2u<-(fread(clct,sep="\t",header=TRUE,select=41))
          bep<-fread(bct,sep="\t",header=TRUE,select=1)
          lep<-fread(lct,sep="\t",header=TRUE,select=6)
-         mep<-fread(mct,sep="\t",header=TRUE,select=11)          
-         
+         mep<-fread(mct,sep="\t",header=TRUE,select=11)
+
        }
        else if(platform=="SOLID4"){
          a1<-(fread(clct,sep="\t",header=TRUE,select=1))
@@ -508,11 +508,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
          b2u<-(fread(clct,sep="\t",header=TRUE,select=46))
          bep<-fread(bct,sep="\t",header=TRUE,select=1)
          lep<-fread(lct,sep="\t",header=TRUE,select=6)
-         mep<-fread(mct,sep="\t",header=TRUE,select=11)          
-         
+         mep<-fread(mct,sep="\t",header=TRUE,select=11)
+
        }
      }
-     
+
    }
    else if(method=="SAIL"){
      if(readtype=="default"){a1t<-a1
@@ -524,11 +524,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
                              b1u<-(fread(b1u,sep="\t",select=3))
                              a2<-(fread(a2,sep="\t",select=3))
                              b2<-(fread(b2,sep="\t",select=3))
-                             b2d<-(fread(b2d,sep="\t",select=3)) 
-                             b2u<-(fread(b2u,sep="\t",select=3)) 
+                             b2d<-(fread(b2d,sep="\t",select=3))
+                             b2u<-(fread(b2u,sep="\t",select=3))
                              bep<-(fread(bep,sep="\t",select=3))
                              lep<-(fread(lep,sep="\t",select=3))
-                             mep<-(fread(mep,sep="\t",select=3)) 
+                             mep<-(fread(mep,sep="\t",select=3))
                              int<-(fread(a1t,sep="\t",select=1))
      }
      else if(readtype=="mostcomplex"){a1t<-a1
@@ -540,16 +540,16 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
                                       b1u<-(fread(b1u,sep="\t",select=4))
                                       a2<-(fread(a2,sep="\t",select=4))
                                       b2<-(fread(b2,sep="\t",select=4))
-                                      b2d<-(fread(b2d,sep="\t",select=4)) 
-                                      b2u<-(fread(b2u,sep="\t",select=4)) 
+                                      b2d<-(fread(b2d,sep="\t",select=4))
+                                      b2u<-(fread(b2u,sep="\t",select=4))
                                       bep<-(fread(bep,sep="\t",select=4))
                                       lep<-(fread(lep,sep="\t",select=4))
-                                      mep<-(fread(mep,sep="\t",select=4)) 
+                                      mep<-(fread(mep,sep="\t",select=4))
                                       int<-(fread(a1t,sep="\t",select=1))
      }
-     
-     
-     
+
+
+
    }
    else if (method=="RSEM"){
      if(readtype=="default"){a1t<-a1
@@ -561,11 +561,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
                              b1u<-(fread(b1u,sep="\t",select=7))
                              a2<-(fread(a2,sep="\t",select=7))
                              b2<-(fread(b2,sep="\t",select=7))
-                             b2d<-(fread(b2d,sep="\t",select=7)) 
-                             b2u<-(fread(b2u,sep="\t",select=7)) 
+                             b2d<-(fread(b2d,sep="\t",select=7))
+                             b2u<-(fread(b2u,sep="\t",select=7))
                              bep<-(fread(bep,sep="\t",select=7))
                              lep<-(fread(lep,sep="\t",select=7))
-                             mep<-(fread(mep,sep="\t",select=7)) 
+                             mep<-(fread(mep,sep="\t",select=7))
                              int<-(fread(a1t,sep="\t",select=1))
      }
      if(readtype=="mostcomplex"){
@@ -578,11 +578,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",select=6))
        a2<-(fread(a2,sep="\t",select=6))
        b2<-(fread(b2,sep="\t",select=6))
-       b2d<-(fread(b2d,sep="\t",select=6)) 
-       b2u<-(fread(b2u,sep="\t",select=6)) 
+       b2d<-(fread(b2d,sep="\t",select=6))
+       b2u<-(fread(b2u,sep="\t",select=6))
        bep<-(fread(bep,sep="\t",select=6))
        lep<-(fread(lep,sep="\t",select=6))
-       mep<-(fread(mep,sep="\t",select=6)) 
+       mep<-(fread(mep,sep="\t",select=6))
        int<-(fread(a1t,sep="\t",select=1))
      }
      if(readtype=="mostbasic"){
@@ -595,11 +595,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",select=5))
        a2<-(fread(a2,sep="\t",select=5))
        b2<-(fread(b2,sep="\t",select=5))
-       b2d<-(fread(b2d,sep="\t",select=5)) 
-       b2u<-(fread(b2u,sep="\t",select=5)) 
+       b2d<-(fread(b2d,sep="\t",select=5))
+       b2u<-(fread(b2u,sep="\t",select=5))
        bep<-(fread(bep,sep="\t",select=5))
        lep<-(fread(lep,sep="\t",select=5))
-       mep<-(fread(mep,sep="\t",select=5)) 
+       mep<-(fread(mep,sep="\t",select=5))
        int<-(fread(a1t,sep="\t",select=1))
      }
    }#RSEM input
@@ -632,11 +632,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",header=TRUE,select=5))
        a2<-(fread(a2,sep="\t",header=TRUE,select=5))
        b2<-(fread(b2,sep="\t",header=TRUE,select=5))
-       b2d<-(fread(b2d,sep="\t",header=TRUE,select=5)) 
-       b2u<-(fread(b2u,sep="\t",header=TRUE,select=5)) 
+       b2d<-(fread(b2d,sep="\t",header=TRUE,select=5))
+       b2u<-(fread(b2u,sep="\t",header=TRUE,select=5))
        bep<-(fread(bep,sep="\t",header=TRUE,select=5))
        lep<-(fread(lep,sep="\t",header=TRUE,select=5))
-       mep<-(fread(mep,sep="\t",header=TRUE,select=5)) 
+       mep<-(fread(mep,sep="\t",header=TRUE,select=5))
        int<-(fread(a1t,sep="\t",header=TRUE,select=1))
        int2<-(fread(a1t,sep="\t",header=TRUE,select=2))
      }
@@ -650,11 +650,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",header=TRUE,select=6))
        a2<-(fread(a2,sep="\t",header=TRUE,select=6))
        b2<-(fread(b2,sep="\t",header=TRUE,select=6))
-       b2d<-(fread(b2d,sep="\t",header=TRUE,select=6)) 
-       b2u<-(fread(b2u,sep="\t",header=TRUE,select=6)) 
+       b2d<-(fread(b2d,sep="\t",header=TRUE,select=6))
+       b2u<-(fread(b2u,sep="\t",header=TRUE,select=6))
        bep<-(fread(bep,sep="\t",header=TRUE,select=6))
        lep<-(fread(lep,sep="\t",header=TRUE,select=6))
-       mep<-(fread(mep,sep="\t",header=TRUE,select=6)) 
+       mep<-(fread(mep,sep="\t",header=TRUE,select=6))
        int<-(fread(a1t,sep="\t",header=TRUE,select=1))
        int2<-(fread(a1t,sep="\t",header=TRUE,select=2))
      }
@@ -668,15 +668,15 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",header=TRUE,select=7))
        a2<-(fread(a2,sep="\t",header=TRUE,select=7))
        b2<-(fread(b2,sep="\t",header=TRUE,select=7))
-       b2d<-(fread(b2d,sep="\t",header=TRUE,select=7)) 
-       b2u<-(fread(b2u,sep="\t",header=TRUE,select=7)) 
+       b2d<-(fread(b2d,sep="\t",header=TRUE,select=7))
+       b2u<-(fread(b2u,sep="\t",header=TRUE,select=7))
        bep<-(fread(bep,sep="\t",header=TRUE,select=7))
        lep<-(fread(lep,sep="\t",header=TRUE,select=7))
-       mep<-(fread(mep,sep="\t",header=TRUE,select=7)) 
+       mep<-(fread(mep,sep="\t",header=TRUE,select=7))
        int<-(fread(a1t,sep="\t",header=TRUE,select=1))
        int2<-(fread(a1t,sep="\t",header=TRUE,select=2))
      }
-     
+
    }#RSEM transcriptome input
    else if (method=="xpress"|method=="xpress2"|method=="xpress3"){
      if(readtype=="default"){
@@ -689,11 +689,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",header=TRUE,select=8))
        a2<-(fread(a2,sep="\t",header=TRUE,select=8))
        b2<-(fread(b2,sep="\t",header=TRUE,select=8))
-       b2d<-(fread(b2d,sep="\t",header=TRUE,select=8)) 
-       b2u<-(fread(b2u,sep="\t",header=TRUE,select=8)) 
+       b2d<-(fread(b2d,sep="\t",header=TRUE,select=8))
+       b2u<-(fread(b2u,sep="\t",header=TRUE,select=8))
        bep<-(fread(bep,sep="\t",header=TRUE,select=8))
        lep<-(fread(lep,sep="\t",header=TRUE,select=8))
-       mep<-(fread(mep,sep="\t",header=TRUE,select=8)) 
+       mep<-(fread(mep,sep="\t",header=TRUE,select=8))
        int<-(fread(a1t,sep="\t",header=TRUE,select=2)) #1 is txid, 2 is gene_id
      }
      else if(readtype=="mostbasic"){
@@ -706,11 +706,11 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",header=TRUE,select=7))
        a2<-(fread(a2,sep="\t",header=TRUE,select=7))
        b2<-(fread(b2,sep="\t",header=TRUE,select=7))
-       b2d<-(fread(b2d,sep="\t",header=TRUE,select=7)) 
-       b2u<-(fread(b2u,sep="\t",header=TRUE,select=7)) 
+       b2d<-(fread(b2d,sep="\t",header=TRUE,select=7))
+       b2u<-(fread(b2u,sep="\t",header=TRUE,select=7))
        bep<-(fread(bep,sep="\t",header=TRUE,select=7))
        lep<-(fread(lep,sep="\t",header=TRUE,select=7))
-       mep<-(fread(mep,sep="\t",header=TRUE,select=7)) 
+       mep<-(fread(mep,sep="\t",header=TRUE,select=7))
        int<-(fread(a1t,sep="\t",header=TRUE,select=2)) #1 is txid, 2 is gene_id
      }
      else if(readtype=="mostcomplex"){
@@ -723,17 +723,17 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
        b1u<-(fread(b1u,sep="\t",header=TRUE,select=11))
        a2<-(fread(a2,sep="\t",header=TRUE,select=11))
        b2<-(fread(b2,sep="\t",header=TRUE,select=11))
-       b2d<-(fread(b2d,sep="\t",header=TRUE,select=11)) 
-       b2u<-(fread(b2u,sep="\t",header=TRUE,select=11)) 
+       b2d<-(fread(b2d,sep="\t",header=TRUE,select=11))
+       b2u<-(fread(b2u,sep="\t",header=TRUE,select=11))
        bep<-(fread(bep,sep="\t",header=TRUE,select=11))
        lep<-(fread(lep,sep="\t",header=TRUE,select=11))
-       mep<-(fread(mep,sep="\t",header=TRUE,select=11)) 
+       mep<-(fread(mep,sep="\t",header=TRUE,select=11))
        int<-(fread(a1t,sep="\t",header=TRUE,select=2)) #1 is txid, 2 is gene_id
      }
-     
-     
+
+
    }#xpress transcriptome input
-   
+
    if(length(names(a1))>1000){
      tdf<-data.frame(names(a1),a1,a1d,a1u,b1,b1d,b1u,a2,b2,b2d,b2u,bep,lep,mep)} #ensures naming accuracy
    else if(length(grep("RSEM|LS|RSEMt|xpress|SAIL|CUFF",method))>0){
@@ -741,13 +741,13 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
    else if(length(grep("RSEMt|RSEMc",method))>0){
      tdf<-data.frame(int,a1,a1d,a1u,b1,b1d,b1u,a2,b2,b2d,b2u,bep,lep,mep,int2)} #reverts from separate RSEM naming convention to 'standard'}
    else{tdf<-data.frame(int,a1,a1d,a1u,b1,b1d,b1u,a2,b2,b2d,b2u,bep,lep,mep)} #standard naming
-   
+
    if(length(tdf)==14){
      colnames(tdf)<-c("gene_id","a1","a1d","a1u","b1","b1d","b1u","a2","b2","b2d","b2u","bep","lep","mep")}
    else if(length(tdf)==15){   colnames(tdf)<-c("gene_id","a1","a1d","a1u","b1","b1d","b1u","a2","b2","b2d","b2u","bep","lep","mep","geneid")}
   }
 #read in and name count data from output files
-{tdf<-tdf[grep("unknown|no_feature|ambiguous|too_low_aQual|not_aligned|alignment_not_unique",tdf$gene_id,invert=TRUE),] 
+{tdf<-tdf[grep("unknown|no_feature|ambiguous|too_low_aQual|not_aligned|alignment_not_unique",tdf$gene_id,invert=TRUE),]
  tdf$norm<-norm
  if(norm>0){tdf<-normcountdf(tdf,norm)}#do norm if norm==1
  #tdf$mean1<-rowMeans(data.frame(tdf$a1,tdf$a1d,tdf$a1u,tdf$b1,tdf$b1d,tdf$b1u))
@@ -769,12 +769,12 @@ makerefmetdfb<-function(platform="ILLUMINA",mapper="TH",method="HTS",reference="
  # tdf$expM2[is.na(tdf$expM2)]<-0
  # tdf$expM2[tdf$expM2==Inf]<-0
  # tdf$expM2[tdf$expM2==-Inf]<-0
- 
+
  # tdf$expM3<-log2((act[1]*tdf$bep+act[2]*tdf$lep+act[3]*tdf$mep)/(act[4]*tdf$bep+act[5]*tdf$lep+act[6]*tdf$mep))
  # tdf$expM3[is.na(tdf$expM3)]<-0
  # tdf$expM3[tdf$expM3==Inf]<-0
  # tdf$expM3[tdf$expM3==-Inf]<-0
- 
+
  # tdf$eM1<-((act[1]*tdf$bep+act[2]*tdf$lep+act[3]*tdf$mep))
  # tdf$eM2<-((act[4]*tdf$bep+act[5]*tdf$lep+act[6]*tdf$mep))
  # tdf$reference<-reference
@@ -821,18 +821,18 @@ if(type=="BLM"){ a<-blmmixfraction(df);
                                          amean2=c(mean(b$value2[b$variable=="mixpropA"&b$value2>0]),mean(b$value2[b$variable=="mixpropB"&b$value2>0]),mean(b$value2[b$variable=="mixpropC"&b$value2>0])),
                                          sd1=c(sd(b$value1[b$variable=="mixpropA"&b$value1>0]),sd(b$value1[b$variable=="mixpropB"&b$value1>0]),sd(b$value1[b$variable=="mixpropC"&b$value1>0])),
                                          sd2=c(sd(b$value2[b$variable=="mixpropA"&b$value2>0]),sd(b$value2[b$variable=="mixpropB"&b$value2>0]),sd(b$value2[b$variable=="mixpropC"&b$value2>0])))
-                      
+
     }
     sumdf<-data.frame(amean1=c(mean(a$value1[a$variable=="mixpropA"&a$value1>0]),mean(a$value1[a$variable=="mixpropB"&a$value1>0]),mean(a$value1[a$variable=="mixpropC"&a$value1>0])),
                       amean2=c(mean(a$value2[a$variable=="mixpropA"&a$value2>0]),mean(a$value2[a$variable=="mixpropB"&a$value2>0]),mean(a$value2[a$variable=="mixpropC"&a$value2>0])),
                       sd1=c(sd(a$value1[a$variable=="mixpropA"&a$value1>0]),sd(a$value1[a$variable=="mixpropB"&a$value1>0]),sd(a$value1[a$variable=="mixpropC"&a$value1>0])),
                       sd2=c(sd(a$value2[a$variable=="mixpropA"&a$value2>0]),sd(a$value2[a$variable=="mixpropB"&a$value2>0]),sd(a$value2[a$variable=="mixpropC"&a$value2>0])))
-    
+
   }
   #do the plotting
 if(type=="SEQC"){
   a<-GeneralLMest(dat,spikeID="ERCC_",components=c("A1","A2","A3","A4","B1","B2","B3","B4"),mixes=c("C1","C2","C3","C4","D1","D2","D3","D4"))
-  
+
 }
 if(!missing(df2)&type=="SEQC"){
     g<-ggplot(subset(a,sample=="C"))
@@ -844,8 +844,8 @@ if(!missing(df2)&type=="SEQC"){
       theme(legend.text=element_text(size=rel(1.4)))+theme(axis.title=element_text(size=rel(1.6)))+theme(axis.text=element_text(size=rel(1)))+
       theme(strip.background = element_rect(fill = 'white'))+geom_pointrange(data=sumdf,aes(x=amean1,y=amean2,ymax=amean2+sd2,ymin=amean2-sd2))+theme(aspect.ratio=1)+
       geom_errorbarh(data=sumdf,aes(x=amean1,y=amean2,xmax=amean1+sd1,xmin=amean1-sd1))+geom_point(data=subset(b,sample=="C"),aes(x=Apct,y=b$Apct[b$sample=="D"],color="red"))
-    
-    
+
+
   }
   if(type=="SEQC"){
     g<-ggplot(subset(a,sample=="C"))
@@ -861,7 +861,7 @@ if(!missing(df2)&type=="SEQC"){
              theme(aspect.ratio=1)+
              geom_errorbarh(data=sumdf,aes(x=amean1,y=amean2,xmax=amean1+sd1,xmin=amean1-sd1)))
   }
-  
+
   if(!missing(df2)&type=="BLM"){
     a$mcor<-1
     b$mcor<-0
@@ -882,7 +882,7 @@ if(!missing(df2)&type=="SEQC"){
              theme(axis.text=element_text(size=rel(1.3)))+theme(axis.title=element_text(size=rel(1.5)))+theme(legend.text=element_text(size=rel(1.5)))+theme(legend.title=element_text(size=rel(1.5)))+
              geom_pointrange(data=merged,aes(x=amean1,y=amean2,ymax=amean2+sd2,ymin=amean2-sd2,alpha=as.factor(mcor)),size=1.15)+
              geom_errorbarh(data=merged,aes(x=amean1,y=amean2,xmax=amean1+sd1,xmin=amean1-sd1,height=0,alpha=as.factor(mcor)),size=1.3)+scale_alpha_manual(name=Discriminator,breaks=c(1,0),labels=c("True","False"),values=c(0.3,1))+
-             theme(aspect.ratio=1)+theme(axis.ticks.margin=unit(x = 0.25,units = "cm"))+theme(axis.text=element_text(size=16)))    
+             theme(aspect.ratio=1)+theme(axis.ticks.margin=unit(x = 0.25,units = "cm"))+theme(axis.text=element_text(size=16)))
   }
   if(missing(df2)&type=="BLM"){
     a$mcor<-1
@@ -900,12 +900,12 @@ if(!missing(df2)&type=="SEQC"){
              coord_cartesian(ylim=c(0,1),xlim=c(0,1))+theme(axis.text=element_text(size=rel(1.3)))+theme(axis.title=element_text(size=rel(1.5)))+theme(legend.text=element_text(size=rel(1.5)))+
              theme(legend.title=element_text(size=rel(1.5)))+geom_pointrange(data=merged,aes(x=amean1,y=amean2,ymax=amean2+sd2,ymin=amean2-sd2),size=1.15)+
              geom_errorbarh(data=merged,aes(x=amean1,y=amean2,xmax=amean1+sd1,xmin=amean1-sd1,height=0),size=1.3)+theme(aspect.ratio=1))
-    
+
   }
-  
+
 }#Generates a target plot discriminating between two input dataframes (from makerefmetdfb) based on discriminator value Discriminator (where df1 is assumed TRUE for this value)
 blmmixfraction<-function(subdf){
-  
+
   value<-unname(lm(subdf[,2]~subdf[,12]+subdf[,13]+subdf[,14]+0)$coefficients/sum(lm(subdf[,2]~subdf[,12]+subdf[,13]+subdf[,14]+0)$coefficients))
   value1<-unname(lm(subdf[,3]~subdf[,12]+subdf[,13]+subdf[,14]+0)$coefficients/sum(lm(subdf[,3]~subdf[,12]+subdf[,13]+subdf[,14]+0)$coefficients))
   value2<-unname(lm(subdf[,4]~subdf[,12]+subdf[,13]+subdf[,14]+0)$coefficients/sum(lm(subdf[,4]~subdf[,12]+subdf[,13]+subdf[,14]+0)$coefficients))
@@ -962,16 +962,16 @@ blmmixfraction<-function(subdf){
   mixpropB<-(value9[2]/Bmfrac)/((value9[1]/Amfrac)+(value9[2]/Bmfrac)+(value9[3]/Cmfrac))
   mixpropA<-(value9[1]/Amfrac)/((value9[1]/Amfrac)+(value9[2]/Bmfrac)+(value9[3]/Cmfrac))
   outdf<-rbind(outdf,c(mixpropA,mixpropB,mixpropC))
-  
-  
-  
-  
+
+
+
+
   return(outdf)
 }#uses linear models to determine the mix fraction of a dataset
 varstabdata<-function(){
-  
+
   library(DESeq2)
-  
+
   deseqc<-NULL;deseqc$A<-rowSums(SEQCDF[,c(3,4,5,6)])
   deseqc$B<-rowSums(SEQCDF[,c(7,8,9,10)])
   deseqc$C<-rowSums(SEQCDF[,c(11,12,13,14)])
@@ -995,9 +995,9 @@ makeseqcdf<-function(){
     tdf<-fread(string)
     tdf<-as.data.frame(tdf)
     fdf$gene_id<-tdf[,1]
-    fdf$site<-c(rep(I,length(tdf[,3]))) 
+    fdf$site<-c(rep(I,length(tdf[,3])))
     fdf$A1<-rowSums(tdf[,grep("_A_1_",colnames(tdf))])
-    fdf$A2<-rowSums(tdf[,grep("_A_2_",colnames(tdf))])  
+    fdf$A2<-rowSums(tdf[,grep("_A_2_",colnames(tdf))])
     fdf$A3<-rowSums(tdf[,grep("_A_3_",colnames(tdf))])
     fdf$A4<-rowSums(tdf[,grep("_A_4_",colnames(tdf))])
     #fdf$A5<-rowSums(tdf[,grep("_A_5_",colnames(tdf))])
@@ -1029,9 +1029,9 @@ makeseqcdf<-function(){
     tdf<-fread(string)
     tdf<-as.data.frame(tdf)
     fdf$gene_id<-tdf[,1]
-    fdf$site<-c(rep(I,length(tdf[,3]))) 
+    fdf$site<-c(rep(I,length(tdf[,3])))
     fdf$A1<-rowSums(tdf[,grep("_A_1_",colnames(tdf))])
-    fdf$A2<-rowSums(tdf[,grep("_A_2_",colnames(tdf))])  
+    fdf$A2<-rowSums(tdf[,grep("_A_2_",colnames(tdf))])
     fdf$A3<-rowSums(tdf[,grep("_A_3_",colnames(tdf))])
     fdf$A4<-rowSums(tdf[,grep("_A_4_",colnames(tdf))])
     #fdf$A5<-rowSums(tdf[,grep("_A_5_",colnames(tdf))])
@@ -1083,26 +1083,26 @@ assignIdentity<-function(dat,index=5,forpub=1,minct=20){
     dat$identity[dat$mep>index*dat$bep&dat$mep>index*dat$lep&dat$mep>minct]<-"Muscle"
     dat$identity[grep("ERCC-",dat$gene_id)]<-"external"
     if(sum(dat$identity=="x")==0){dat$identity[match(ercc96$V9,dat$gene_id)]<-"external"}
-    
+
   }
   return(dat)}#subsets genes within dataframe dat based on Bep Lep and Mep being > index * others (tissue-selective: >5x counts) and above a minimum threshold minct
 calcmrnafrac<-function(dat,selection=2:14,e5=FALSE,type,ret=0){
     ety<-1
     if(missing(type)){type=1}
     ercc<-rownames(dat)[substr(rownames(dat),1,5)=="ERCC-"]
-    if(type!=1){ercc<-rownames(dat)[match(ercc96$V1[ercc96$V4=="C"],rownames(dat))]}              
+    if(type!=1){ercc<-rownames(dat)[match(ercc96$V1[ercc96$V4=="C"],rownames(dat))]}
     if(type=="f"){ercc<-match(ercc96$uname[ercc96$pool=="C"],dat$gene_id);ercc<-ercc[!is.na(ercc)]}
     if(length(ercc)==0){ety<-2;ercc<-match(ercc96$V9,dat$gene_id);ercc<-ercc[!is.na(ercc)]}
     if(length(ercc)==0){ety<-1;ercc<-grep("ERCC-",dat$gene_id)}
     if(length(ercc)==0){ety<-3;ercc<-grep("ERCC_",dat$gene_id)}
     if(length(ercc)==0){return("Sorry, ERROR14 LMAO YOU HAVE NO IDEA WHAT ERROR 14 IS AND NEITHER DO I")}
     non.ercc<-rownames(dat)[!rownames(dat)%in%ercc]
-    
+
     if(ety<3){
       count<-rbind(colSums(dat[ercc,selection]),colSums(dat[non.ercc,selection]))
       if(length(selection)==13){ercc.targ<-c(rep(.05*.15,10),rep(.03*.1,3))}
       else{ercc.targ<-c(rep(0.08,length(selection)))}
-      
+
     }
     else if(ety==3){
       count<-rbind(colSums(dat[ercc,selection]),colSums(dat[non.ercc,selection]))
@@ -1143,7 +1143,7 @@ calcmrnafracgeneral<-function(dat,spikeID="ERCC-",spikemassfraction=.1){
   if(length(ercc)==0){ercc<-grep(spikeID,dat[,annotcolumn[1]])} #assuming that the name is in the first annotation column...
   if(length(ercc)==0){stop("I can't identify the spike-ins within your count table.   The spikeID variable should be set to something which uniquely identifies spike-ins.   Rownames are first checked for names, then if there are non-numeric columns, only the FIRST is checked for gene names. ")}
 nonercc<-!(1:length(dat[,countcolumns[1]]))%in%ercc
-  
+
   count<-rbind(colSums(dat[ercc,countcolumns]),colSums(dat[nonercc,countcolumns])) #determines the counts for spikes and non-spikes.
   ercc.targ<-spikemassfraction  #defines the "targeted" mass fraction for spikes : Either a vector with length = #columns,or a scalar
   mRNA.frac<-ercc.targ*count[2,]/count[1,]  #calculates an mRNA fraction based on those available data
@@ -1158,10 +1158,10 @@ normalizeSEQC<-function(stuff=SEQCDF,type="UQN"){
     tmp<-subset(stuff,site==I)
     nfac<-calcNormFactors(tmp[3:18],method="upperquartile")
     for(I in 3:18){tmp[,I]<-tmp[,I]*nfac[(I-2)]} #does the normalization
-    
+
     fmol<-rbind(fmol,tmp)
   }
-  
+
   return((fmol))
   }
   else if(type=="LSN"){
@@ -1170,11 +1170,11 @@ normalizeSEQC<-function(stuff=SEQCDF,type="UQN"){
       mfac<-max(colSums(tmp[3:18]))
       for(I in 3:18){tmp[,I]<-tmp[,I]*mfac/sum(tmp[,I])}
       fmol<-rbind(fmol,tmp)
-      
-      
+
+
     }
     return((fmol))
-    
+
   }
   else if(type=="Both"){
     fmox<-NULL
@@ -1188,12 +1188,12 @@ normalizeSEQC<-function(stuff=SEQCDF,type="UQN"){
       tmp<-subset(fmol,site==I)
       nfac<-calcNormFactors(tmp[3:18],method="upperquartile")
       for(I in 3:18){tmp[,I]<-tmp[,I]*nfac[(I-2)]} #does the normalization
-      
+
       fmox<-rbind(fmox,tmp)
     }
     return((fmox))
   }
-}#normalizes SEQC dataframes by various methods.  
+}#normalizes SEQC dataframes by various methods.
 SEQClm<-function(infile,e5=TRUE,e4=FALSE,ignoremrna=FALSE,filterercc=FALSE){
   if(e5==FALSE&e4==FALSE){
     infile$Amean<-rowMeans(infile[,grep("A",names(infile))])
@@ -1210,7 +1210,7 @@ SEQClm<-function(infile,e5=TRUE,e4=FALSE,ignoremrna=FALSE,filterercc=FALSE){
     d3<-coefficients(lm(data=infile,D3 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,D3 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
     d4<-coefficients(lm(data=infile,D4 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,D4 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
     d5<-coefficients(lm(data=infile,D5 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,D5 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
-    
+
     rdf<-rbind(c1,c2,c3,c4,c5,d1,d2,d3,d4,d5)
     rdf<-data.frame(rdf,c("C1","C2","C3","C4","C5","D1","D2","D3","D4","D5"))
     names(rdf)<-c("Aest","Best","library")
@@ -1221,8 +1221,8 @@ SEQClm<-function(infile,e5=TRUE,e4=FALSE,ignoremrna=FALSE,filterercc=FALSE){
     mfrac<-c(1,1)
 #   if(ignoremrna==FALSE){mfrac<-calcmrnafrac(infile,selection=c(3:14),type="f")}#this does the calculation using "only" 1:1 subpool.  It doesn't affect anything substantially.
     if(ignoremrna==FALSE){mfrac<-calcmrnafrac(infile,selection=c(3:14))}
-    
-        
+
+
     c1<-coefficients(lm(data=infile,C1 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,C1 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
     c2<-coefficients(lm(data=infile,C2 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,C2 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
     c3<-coefficients(lm(data=infile,C3 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,C3 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
@@ -1231,7 +1231,7 @@ SEQClm<-function(infile,e5=TRUE,e4=FALSE,ignoremrna=FALSE,filterercc=FALSE){
     d2<-coefficients(lm(data=infile,D2 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,D2 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
     d3<-coefficients(lm(data=infile,D3 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,D3 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
     d4<-coefficients(lm(data=infile,D4 ~ I(Amean*mfrac[1])+I(Bmean*mfrac[2])+0))/sum(coefficients(lm(data=infile,D4 ~ I(Amean*mfrac[1]) + I (Bmean*mfrac[2])+0)))
-    
+
     rdf<-rbind(c1,c2,c3,c4,d1,d2,d3,d4)
     rdf<-data.frame(rdf,c("C1","C2","C3","C4","D1","D2","D3","D4"))
     names(rdf)<-c("Aest","Best","library")
@@ -1248,7 +1248,7 @@ SEQClm<-function(infile,e5=TRUE,e4=FALSE,ignoremrna=FALSE,filterercc=FALSE){
       c1<-coefficients(lm(data=infile,C1 ~ I(Amean)+I(Bmean)+0))/sum(coefficients(lm(data=infile,C1 ~ I(Amean) + I (Bmean)+0)))
       c2<-coefficients(lm(data=infile,C2 ~ I(Amean)+I(Bmean)+0))/sum(coefficients(lm(data=infile,C2 ~ I(Amean) + I (Bmean)+0)))
       c3<-coefficients(lm(data=infile,C3 ~ I(Amean)+I(Bmean)+0))/sum(coefficients(lm(data=infile,C3 ~ I(Amean) + I (Bmean)+0)))
-      
+
       d1<-coefficients(lm(data=infile,D1 ~ I(Amean)+I(Bmean)+0))/sum(coefficients(lm(data=infile,D1 ~ I(Amean) + I (Bmean)+0)))
       d2<-coefficients(lm(data=infile,D2 ~ I(Amean)+I(Bmean)+0))/sum(coefficients(lm(data=infile,D2 ~ I(Amean) + I (Bmean)+0)))
       d3<-coefficients(lm(data=infile,D3 ~ I(Amean)+I(Bmean)+0))/sum(coefficients(lm(data=infile,D3 ~ I(Amean) + I (Bmean)+0)))
@@ -1268,11 +1268,11 @@ SEQClm<-function(infile,e5=TRUE,e4=FALSE,ignoremrna=FALSE,filterercc=FALSE){
     c1<-coefficients(lm(data=infile,C1 ~ I(Amean*mfrac[13])+I(Bmean*mfrac[14])+0))/sum(coefficients(lm(data=infile,C1 ~ I(Amean*mfrac[13]) + I (Bmean*mfrac[14])+0)))
     c2<-coefficients(lm(data=infile,C2 ~ I(Amean*mfrac[13])+I(Bmean*mfrac[14])+0))/sum(coefficients(lm(data=infile,C2 ~ I(Amean*mfrac[13]) + I (Bmean*mfrac[14])+0)))
     c3<-coefficients(lm(data=infile,C3 ~ I(Amean*mfrac[13])+I(Bmean*mfrac[14])+0))/sum(coefficients(lm(data=infile,C3 ~ I(Amean*mfrac[13]) + I (Bmean*mfrac[14])+0)))
-    
+
     d1<-coefficients(lm(data=infile,D1 ~ I(Amean*mfrac[13])+I(Bmean*mfrac[14])+0))/sum(coefficients(lm(data=infile,D1 ~ I(Amean*mfrac[13]) + I (Bmean*mfrac[14])+0)))
     d2<-coefficients(lm(data=infile,D2 ~ I(Amean*mfrac[13])+I(Bmean*mfrac[14])+0))/sum(coefficients(lm(data=infile,D2 ~ I(Amean*mfrac[13]) + I (Bmean*mfrac[14])+0)))
     d3<-coefficients(lm(data=infile,D3 ~ I(Amean*mfrac[13])+I(Bmean*mfrac[14])+0))/sum(coefficients(lm(data=infile,D3 ~ I(Amean*mfrac[13]) + I (Bmean*mfrac[14])+0)))
-    
+
     rdf<-rbind(c1,c2,c3,d1,d2,d3)
     rdf<-data.frame(rdf,c("C1","C2","C3","D1","D2","D3"))
     names(rdf)<-c("Aest","Best","library")
@@ -1291,13 +1291,13 @@ deseqcdfsite<-function(){
     tdf<-onesitedeseq(stf=I,rpoint=2)
     tdf$site<-I
     odf<-rbind(odf,as.data.frame(tdf))
-    
-    
+
+
   }
   return(odf)
 }
 onesitedeseq<-function(INDF=SEQCDF,stf="AGR",rpoint=1){
-  
+
   library(DESeq2)
   #built deseqc dataframe out of SEQCDF:
     juice<-subset(INDF,site==stf)
@@ -1321,12 +1321,12 @@ onesitedeseq<-function(INDF=SEQCDF,stf="AGR",rpoint=1){
   deseqc$Dm2<-deseqc$Dm1
   deseqc$Dm3<-deseqc$Dm1
   deseqc$Dm4<-deseqc$Dm1
-  deseqc<-as.data.frame(deseqc) 
+  deseqc<-as.data.frame(deseqc)
   coldata<-data.frame(site=stf,sample=c(rep("C",4),rep("D",4),rep("Cm",4),rep("Dm",4)),replicate=c(1,2,3,4))
    fullctab<-DESeqDataSetFromMatrix(countData=deseqc,colData=coldata,design= ~ sample)
-  if(rpoint==1){  return(fullctab)}    
+  if(rpoint==1){  return(fullctab)}
   fullctab<-DESeq(fullctab)
-  fullctab<-results(fullctab,contrast=c("sample","C","Cm"))  
+  fullctab<-results(fullctab,contrast=c("sample","C","Cm"))
   return(fullctab)
 }
 seqcmodel<-function(DF=SEQCDF){
@@ -1344,10 +1344,10 @@ seqcmodel<-function(DF=SEQCDF){
     tmp$sdd<-rowSds(as.matrix(tmp[,c(15:18)]))
     mfrac<-calcmrnafrac(dat=tmp,selection=c(19,21))
     tmp$modelC<-(tmp$repA*mfrac[1]*.75)+(tmp$repB*mfrac[2]*.25)
-    tmp$modelD<-(tmp$repA*mfrac[1]*.25)+(tmp$repB*mfrac[2]*.75)  
+    tmp$modelD<-(tmp$repA*mfrac[1]*.25)+(tmp$repB*mfrac[2]*.75)
     tmp$modelC<-tmp$modelC/sum(tmp$modelC)*sum(tmp$repC)
     tmp$modelD<-tmp$modelD/sum(tmp$modelD)*sum(tmp$repD)
-    
+
     out<-rbind(out,tmp)
   }
   return(out)
@@ -1362,19 +1362,19 @@ GeneralLMest<-function(infile,spikeID="ERCC-",components=c("bep","lep","mep"),mi
 {replicatebehavior="basic" #I don't know what else to do with replicates right now other than average them, but i imagine i'll come up with something more interesting later.
   if(replicates==1){
   if(length(grep(paste0("^",substr(components[1],1,1)),infile))>2){message("Assuming that components with similar starting names are replicates.  Turn this behavior off with replicates=0")}
-  }  
+  }
   if(replicatebehavior=="basic"){
     #find all replicates and turn them into means
     RepMeans<-NULL
     for(I in 1:length(infile)){
     firstreplicates<-grep(paste0("^",substr(components[I],1,1)),components)
     assign(paste0("RepMeans$",components[I]),rowMeans(infile[,components[firstreplicates]]))
-    
+
     }
   }}#testphase code trying to handle SEQCDFs and arbitrary ones with replicates.  Because I really need to spend a day making this code extensible instead of just remaking the figure in a more ad-hoc way...
-  mfrac<-calcmrnafracgeneral(infile,spikeID,spikemassfraction)  
+  mfrac<-calcmrnafracgeneral(infile,spikeID,spikemassfraction)
   if(length(mfrac[components])!=length(components)){return("ERROR:  Number of components != Number of calculated mRNA fractions!")}
-  mixval<-NULL;rdf<-NULL 
+  mixval<-NULL;rdf<-NULL
   #convincing LM to handle arbitrary columns is not simple: The following block tries to do that.
 {
   for(mixtext in mixes){
