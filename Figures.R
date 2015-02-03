@@ -1025,7 +1025,7 @@ makeseqcdf<-function(SEQCcountpath="SEQCtranscript/"){
     fidf<-rbind(fidf,fdf)
   }#adds in the ILM sites
   for ( I in c("NWU","PSU","SQW")){
-    string<-paste(SEQCcountpath,~/Desktop/MainSEQC/SEQC_LifescopeCounts/"SEQC_LIF_",I,"_LifeScope.csv",sep="")
+    string<-paste(SEQCcountpath,"SEQC_LIF_",I,"_LifeScope.csv",sep="")
     fdf<-NULL
     tdf<-fread(string)
     tdf<-as.data.frame(tdf)
