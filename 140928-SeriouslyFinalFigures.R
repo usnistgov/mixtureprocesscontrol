@@ -14,11 +14,19 @@ require(dplyr)||install.packages(dplyr)
 # SEQC : ~/Desktop/MainSEQC/ subdirectories SEQC_MAIN_ILM_rawCounts_ZSu.2012_04_14 & SEQC_LifescopeCounts
 # BLM : ~/Downloads/RawData/BLM/Countdata #added as PAPERUSED.zip (but makerefmetdfb isn't quite fixed yet)
 
-#Figure2:
+#Figure2: LineFigure()
+LineFigure<-function(){
+  theme_set(theme_bw(base_size=18))
+  df<-calcmodel(assignIdentity(makerefmetdfb(norm="UQN")))
+  ggplot()+geom_point(data=subset(df,identity!="external"),aes(x=log2(a1),y=log2(pred1)))+xlab("log2(Observed Mix1 Counts)")+ylab("log2(Predicted Mix1 Counts)")
+}
+#Figure3:targetfigure()
+targetfigure<-function(){
 theme_set(theme_bw(base_size=18))
-#a<-makeTargetPlot(type="BLM",df=makerefmetdfb(norm="UQN"))
-#a+coord_cartesian(ylim=c(0,0.75),xlim=c(0,0.75))+scale_x_continuous(breaks=c(0,0.25,0.5,0.75))+scale_y_continuous(breaks=c(0,0.25,0.5,0.75))
-#Figure3: (just call dendrogramplot)
+a<-makeTargetPlot(type="BLM",df=makerefmetdfb(norm="UQN"))
+return(a+coord_cartesian(ylim=c(0,0.75),xlim=c(0,0.75))+scale_x_continuous(breaks=c(0,0.25,0.5,0.75))+scale_y_continuous(breaks=c(0,0.25,0.5,0.75)))
+}
+#Figure6: call dendrogramplot())
 dendrogramplot<-function(testing=FALSE){
   require(stats)
   require(RColorBrewer)
@@ -53,7 +61,27 @@ dendrogramplot<-function(testing=FALSE){
 rm(clusMember,labelColors,pos=1)
 return(output)
 }
-#Supplemental Figure 2b
+DistributionFigure<-function(indf){
+if(missing(indf)){indf<-makeseqcdf()}
+{seqcmfrac<-NULL;for(I in levels(indf$site)){seqcmfrac<-rbind(seqcmfrac,calcmrnafrac(subset(indf,site==I)[,c(1,3:18)],selection=2:17))}
+ seqcmfrac<-as.data.frame(seqcmfrac)
+ seqcmfrac$site<-levels(indf$site)
+ seqcmfrac<-melt(seqcmfrac,id.vars="site")
+ seqcmfrac$replicate<-substr(seqcmfrac$variable,2,2)
+ seqcmfrac$sample<-substr(seqcmfrac$variable,1,1)
+}#setup the data frame
+summarize(group_by(seqcmfrac,sample,site),mean(value))
+pme<-summarize(group_by(seqcmfrac,site),mean(value),AtoB=mean(value[sample=="A"])/mean(value[sample=="B"]))
+#gives an A to B ratio.  This value is to be compared to the shippydf values (1.39-1.476)
+#The raw data from Shippy Et al (Nature Biotechnology 24, 1123 - 1131 (2006)): Just mean +sd
+randshipsq<-data.frame(atob=rnorm(10000,mean=2.870,sd=0.095)/rnorm(100,mean=2.003,sd=0.124),atoc=rnorm(10000,mean=2.870,sd=0.095)/(rnorm(10000,mean=2.870,sd=0.095)*0.75+rnorm(10000,mean=2.003,sd=0.124)*0.25),
+                       atod=rnorm(10000,mean=2.870,sd=0.095)/(rnorm(10000,mean=2.870,sd=0.095)*0.25+rnorm(10000,mean=2.003,sd=0.124)*0.75))
+#convert to a distribution rather than boxplots
+trial<-rbind(melt(randshipsq),subset(pm4,site!="PSU")[,3:4])
+trial$type<-c(rep("Previous Measurement",30000),(rep("ERCC-estimated",96)))
+levels(trial$variable)<-c("Sample A:B","Sample A:C","Sample A:D")
+ggplot(data=trial)+geom_density(aes(x=value,fill=type,alpha=type))+facet_wrap(~variable)+xlab("Ratio")+scale_alpha_manual(values=c(0.75,0.75),name="mRNA fraction Ratio")+scale_fill_manual(values=c("grey20","grey60"),name="mRNA fraction Ratio")+ylab("")
+}
 sf1<-function(){
 adf<-(subset(rbind(assignIdentity(makerefmetdfb(norm=0)),assignIdentity(makerefmetdfb(norm=1)),assignIdentity(makerefmetdfb(norm="UQN"))),identity!="unclassified"))
 adf$norm<-as.factor(adf$norm);levels(adf$norm)[1]<-"None";levels(adf$norm)[2]<-"Library Size";levels(adf$norm)[3]<-"Upper Quartile" #just some sad cleaning...
@@ -64,7 +92,69 @@ return(print(g+geom_point(data=subset(adf,identity!="unclassified"),aes(x=log2(a
   theme(legend.title=element_blank())+theme(title=element_text(size=20))+
   xlab("Mean Counts (BLM-1+BLM-2)")+ylab("Ratio of counts (BLM-1/BLM-2)")+theme(strip.text.x=element_text(size=24))+theme(axis.title=element_text(size=24))+theme(axis.text=element_text(size=20))+
   guides(colour=guide_legend(override.aes=list(size=5)))))
-}#MA plots : by normalization
+}#Sup fig 1; MA plots : by normalization
+sf5<-function(indf){
+  require(reshape2)
+  if(missing(indf)){
+    indf<-makeseqcdf()}
+  #indf<-normalizeSEQC(indf) #apparently normalization of these data pre-analysis make for some issues...but only for naive/mymethod, decon is unaffected.
+  
+  final<-NULL;finalMod<-NULL;finalNaive<-NULL
+  dset<-cbind(indf[,1:2],rowMeans(indf[,3:6]),rowMeans(indf[,7:10]),(indf[,11:14]),(indf[,15:18]))
+  names(dset)<-c("gene_id","site","A","B","C","C","C","C","D","D","D","D")
+  
+  require("DeconRNASeq")
+  ###SEQClm(subset(SEQCDF,site=="AGR"))  #Debugging - the data that're getting plotted are NOT these...
+  ###value      Dval
+  ###c1 0.7412337 0.2505380
+  ###c2 0.7458750 0.2577192
+  ###c3 0.7427236 0.2474030
+  ###c4 0.7599289 0.2429792
+  ###SEQClm(subset(SEQCDF,site=="AGR"),ignoremrna=TRUE)
+  ###value      Dval
+  ###c1 0.7864730 0.3006213
+  ###c2 0.7905321 0.3086469
+  ###c3 0.7877769 0.2971081
+  ###c4 0.8027694 0.2921405
+  
+  for(I in levels(as.factor(dset$site))){
+    tmp<-DeconRNASeq(datasets=subset(dset,site==I)[c(5:12)],signatures=subset(dset,site==I)[,c(3,4)])
+    tmp<-tmp$out.all
+    tmp<-as.data.frame(tmp)
+    tmp$mix<-c(rep("C",4),rep("D",4))
+    tmp<-melt(tmp)
+    tmp$site<-I
+    naive<-SEQClm(subset(indf,site==I),ignoremrna=TRUE)
+    naive<-melt(naive);naive$site<-I;naive$mix<-c(rep("C",4),rep("D",4));naive$variable<-"A"
+    modeled<-SEQClm(subset(indf,site==I))
+    modeled<-melt(modeled);modeled$site<-I;modeled$mix<-c(rep("C",4),rep("D",4));modeled$variable<-"A"
+    final<-rbind(tmp,final)
+    finalNaive<-rbind(naive,finalNaive)
+    finalMod<-rbind(modeled,finalMod)
+  }
+  #calculates meanvalues
+  final$method<-"DeconRNASeq"
+  finalNaive$method<-"Naive"
+  finalMod$method<-"mRNA-correcting"
+  final<-rbind(final,finalNaive,finalMod)
+  final<-cbind(subset(final,mix=="C"),subset(final,mix=="D")[,3])
+  names(final)[6]<-"dval"
+  final$site<-as.factor(final$site)
+  levels(final$site)<-c("Lab 1 - ILM", "Lab 2 - ILM", "Lab 3 - ILM", "Lab 4 - ILM", "Lab 5 - ILM" , "Lab 6 - ILM" , "Lab 7 - LT" , "Lab 8 - LT", "Lab 9 - LT")
+  require(dplyr)
+  fmean<-group_by(final,method,site,variable)%>%summarise(mean(value),mean(dval),sd(value),sd(dval))
+  names(fmean)<-c("method","site","variable","meanc","meand","sdc","sdd")
+  
+  g<-ggplot(final)
+  g+geom_point(aes(x=value,y=dval,color=(method),pch=method),alpha=0.65,size=4)+coord_cartesian(ylim=c(0.1,0.4),xlim=c(0.6,0.9))+
+    facet_wrap(~ site)+ylab("Amount of SEQC-A in SEQC-C")+xlab("Amount of SEQC-A in SEQC-D")+geom_point(aes(x=0.75,y=0.25),col="grey70")+theme(legend.position="none")+
+    geom_path(data=circleFun(center=c(0.75,0.25),diameter=0.1,npoints=25),aes(x,y),col="grey")+
+    geom_path(data=circleFun(center=c(0.75,0.25),diameter=0.05,npoints=25),aes(x,y),col="grey")+
+    theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank())+theme(panel.margin=unit(1,"cm"))+theme(aspect.ratio=1)+
+    theme(legend.text=element_text(size=rel(1.4)))+theme(axis.title=element_text(size=rel(1.6)))+theme(axis.text=element_text(size=rel(1)))+theme(strip.background = element_rect(fill = 'white'))+theme(strip.text=element_text(size=rel(1.3)))+
+    geom_pointrange(data=fmean,aes(x=meanc,y=meand,ymax=meand+2*sdd,ymin=meand-2*sdd),size=1.15,shape=1)+geom_errorbarh(data=fmean,aes(x=meanc,y=meand,xmax=meanc+2*sdc,xmin=meanc-2*sdc),size=1.3)
+  #if axes along each facet are needed, http://stackoverflow.com/questions/17661052/force-x-axis-text-on-for-all-facets-of-a-facet-grid-plot # it's not simple though...
+}#now SF3.  Target plot: Naive vs Decon vs Us
 sf2a<-function(){
   gdfa<-(assignIdentity(makerefmetdfb(norm="UQN")))
   gdfa$plat<-"HiSeq"
@@ -86,7 +176,7 @@ sf2a<-function(){
     theme(axis.title=element_text(size=24))+theme(axis.text=element_text(size=20))+geom_point(data=subset(gdf,identity=="external"),aes(y=log2(a1*mrat/pme),x=log2(a1/mrat*pme)/2,col=identity,size=identity))
 }#no longer referred to in the paper
 sf4<-function(indf){
-  require(reshape2)
+  require(reshape2);require(grid);require(data.table);require(ggplot2)
   if(missing(indf)){
     indf<-makeseqcdf()}
   #do UQN for ILM sites:
@@ -124,75 +214,13 @@ sf4<-function(indf){
     theme(legend.text=element_text(size=rel(1.4)))+theme(axis.title=element_text(size=rel(1.6)))+theme(axis.text=element_text(size=rel(1)))+theme(strip.background = element_rect(fill = 'white'))+theme(strip.text=element_text(size=rel(1.3)))+
     geom_pointrange(data=fmean,aes(x=meanc,y=meand,ymax=meand+2*sdd,ymin=meand-2*sdd),size=1.15,shape=1)+geom_errorbarh(data=fmean,aes(x=meanc,y=meand,xmax=meanc+2*sdc,xmin=meanc-2*sdc),size=1.3)
   #if axes along each facet are needed, http://stackoverflow.com/questions/17661052/force-x-axis-text-on-for-all-facets-of-a-facet-grid-plot # it's not simple though...
-}#SF4.  SEQC-C and D estimates for interlab.
+}#Now Figure5.  SEQC-C and D estimates for interlab.
 
 #Supplemental Figure3:
 sf3<-function(){figure<-makeTargetPlot(df=makerefmetdfb(norm="UQN",mapper="RSEM",method="RSEM",readtype="mostcomplex"),
                                df2 = makerefmetdfb(norm="UQN",mapper="RSEM",method="RSEM",readtype = "default"),Discriminator = "FPKM",numrings = 2)
-figure+scale_alpha_manual(name="Unit",breaks=c(0,1),labels=c("Count","FPKM"),values=c(0.3,1))}#Target plot: FPKM
+figure+scale_alpha_manual(name="Unit",breaks=c(0,1),labels=c("Count","FPKM"),values=c(0.3,1))}#Target plot: FPKM (Threw an error last time i used it...)
 #Supplemental Figure4:
-sf5<-function(indf){
-  require(reshape2)
-if(missing(indf)){
-  indf<-makeseqcdf()}
-#indf<-normalizeSEQC(indf) #apparently normalization of these data pre-analysis make for some issues...but only for naive/mymethod, decon is unaffected.
-
-final<-NULL;finalMod<-NULL;finalNaive<-NULL
-dset<-cbind(indf[,1:2],rowMeans(indf[,3:6]),rowMeans(indf[,7:10]),(indf[,11:14]),(indf[,15:18]))
-names(dset)<-c("gene_id","site","A","B","C","C","C","C","D","D","D","D")
-
-require("DeconRNASeq")
-###SEQClm(subset(SEQCDF,site=="AGR"))  #Debugging - the data that're getting plotted are NOT these...
-###value      Dval
-###c1 0.7412337 0.2505380
-###c2 0.7458750 0.2577192
-###c3 0.7427236 0.2474030
-###c4 0.7599289 0.2429792
-###SEQClm(subset(SEQCDF,site=="AGR"),ignoremrna=TRUE)
-###value      Dval
-###c1 0.7864730 0.3006213
-###c2 0.7905321 0.3086469
-###c3 0.7877769 0.2971081
-###c4 0.8027694 0.2921405
-
-for(I in levels(as.factor(dset$site))){
-  tmp<-DeconRNASeq(datasets=subset(dset,site==I)[c(5:12)],signatures=subset(dset,site==I)[,c(3,4)])
-  tmp<-tmp$out.all
-  tmp<-as.data.frame(tmp)
-  tmp$mix<-c(rep("C",4),rep("D",4))
-  tmp<-melt(tmp)
-  tmp$site<-I
-  naive<-SEQClm(subset(indf,site==I),ignoremrna=TRUE)
-  naive<-melt(naive);naive$site<-I;naive$mix<-c(rep("C",4),rep("D",4));naive$variable<-"A"
-  modeled<-SEQClm(subset(indf,site==I))
-  modeled<-melt(modeled);modeled$site<-I;modeled$mix<-c(rep("C",4),rep("D",4));modeled$variable<-"A"
-  final<-rbind(tmp,final)
-  finalNaive<-rbind(naive,finalNaive)
-  finalMod<-rbind(modeled,finalMod)
-}
-#calculates meanvalues
-final$method<-"DeconRNASeq"
-finalNaive$method<-"Naive"
-finalMod$method<-"mRNA-correcting"
-final<-rbind(final,finalNaive,finalMod)
-final<-cbind(subset(final,mix=="C"),subset(final,mix=="D")[,3])
-names(final)[6]<-"dval"
-final$site<-as.factor(final$site)
-levels(final$site)<-c("Lab 1 - ILM", "Lab 2 - ILM", "Lab 3 - ILM", "Lab 4 - ILM", "Lab 5 - ILM" , "Lab 6 - ILM" , "Lab 7 - LT" , "Lab 8 - LT", "Lab 9 - LT")
-require(dplyr)
-fmean<-group_by(final,method,site,variable)%>%summarise(mean(value),mean(dval),sd(value),sd(dval))
-names(fmean)<-c("method","site","variable","meanc","meand","sdc","sdd")
-
-g<-ggplot(final)
-g+geom_point(aes(x=value,y=dval,color=(method),pch=method),alpha=0.65,size=4)+coord_cartesian(ylim=c(0.1,0.4),xlim=c(0.6,0.9))+
-  facet_wrap(~ site)+ylab("Amount of SEQC-A in SEQC-C")+xlab("Amount of SEQC-A in SEQC-D")+geom_point(aes(x=0.75,y=0.25),col="grey70")+theme(legend.position="none")+
-  geom_path(data=circleFun(center=c(0.75,0.25),diameter=0.1,npoints=25),aes(x,y),col="grey")+
-  geom_path(data=circleFun(center=c(0.75,0.25),diameter=0.05,npoints=25),aes(x,y),col="grey")+
-  theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank())+theme(panel.margin=unit(1,"cm"))+theme(aspect.ratio=1)+
-  theme(legend.text=element_text(size=rel(1.4)))+theme(axis.title=element_text(size=rel(1.6)))+theme(axis.text=element_text(size=rel(1)))+theme(strip.background = element_rect(fill = 'white'))+theme(strip.text=element_text(size=rel(1.3)))+
-  geom_pointrange(data=fmean,aes(x=meanc,y=meand,ymax=meand+2*sdd,ymin=meand-2*sdd),size=1.15,shape=1)+geom_errorbarh(data=fmean,aes(x=meanc,y=meand,xmax=meanc+2*sdc,xmin=meanc-2*sdc),size=1.3)
-#if axes along each facet are needed, http://stackoverflow.com/questions/17661052/force-x-axis-text-on-for-all-facets-of-a-facet-grid-plot # it's not simple though...
-}#SF5.  Target plot: Naive vs Decon vs Us
 #Supplemental Table1:
 stab1<-function(){
 Figure2<-makerefmetdfb(platform = "5500",norm=0) #we use the 5500 data here because the Illumina data has some inconsistencies with the actual spike-in mix amounts.  Those inconsistencies don't affect
@@ -211,6 +239,7 @@ return(table)
 
 sf2<-function(){ #stuff i did to compare mix models using by uqn/tmm to that achieved by calcmrnafrac
 ##for SEQC:
+  require(edgeR);require(ggplot2);require(data.table);require(dplyr)
 seqcmixmodeling<-function(SEQCDF=SEQCDF,nmethod="TMM",factor="ercc"){
   SEQCDFN<-NULL
   nflist<-NULL
@@ -295,6 +324,18 @@ fig<-g+geom_bar(aes(x=norm,y=rmsd),stat="identity")+facet_wrap(~dset)
 return(fig)
 }#figure at least demonstrates the gist of what i'm going for here...
 
+#Reviewer-Suggested Figures:
+RevS1<-function(){
+  #dispersion:
+  g<-ggplot(subset(Figure2,identity!="external"&putativeoutlier!=1));theme_set(theme_bw(base_size=18));g+geom_point(aes(x=log2(a1),y=cv))+xlab("mean expression")
+  #linearity
+  g+geom_point(aes(x=log2(a1),y=log2(pred1*1603/1374)))+xlab("log counts (observed)")+ylab("log counts(predicted)")
+  #deviation from linearity
+g+geom_point(aes(x=log2(a1),y=log2(pred1*1603/1374)-log2(a1)))+xlab("log counts (observed)")+ylab("deviation from linearity (predicted - observed)")
+  #note: the 1603/1374 term is simply because the sum of predicted counts isn't equal to the sum of observed counts - it's just a normalizing term for (predicted) library size
+}#"Rich plot of the linearity, dispersion, etc"
+
+####Actual code to do stuff.  Called by Figure Functions####
 circleFun<-function(center = c(0,0),diameter = 1, npoints = 100){
   r = diameter / 2
   tt <- seq(0,2*pi,length.out = npoints)
@@ -797,9 +838,10 @@ return(tdf)
 
 
 }#reads input files (Must upload those files somewhere & change the code to read those files from the remote server)
-makeTargetPlot<-function(type="BLM",df,df2,Discriminator="CheeseValue",numrings=4){
+makeTargetPlot<-function(type="BLM",df,df2,Discriminator="CheeseValue",numrings=4,dfr=FALSE){
   require(reshape2)
   require(ggplot2)
+  require(dplyr)
   theme_set(theme_bw(base_size=16))
 if(type=="BLM"){ a<-blmmixfraction(df);
   a$mixnum<-c(1,1,1,1,1,1,2,2,2,2);
@@ -807,7 +849,8 @@ if(type=="BLM"){ a<-blmmixfraction(df);
   a<-a[c(1:4,7:10),]#we *are* ignoring the points on the line.
   a<-as.data.frame(melt(a,id.vars=4))
   a<-data.frame(a[a$mixnum==1,],a[a$mixnum==2,])
-  colnames(a)<-c("mixnum","variable","value1","blah","blah","value2")
+  colnames(a)<-c("mixnum","Component","value1","blah","blah","value2")
+  a<-a[,c("Component","value1","value2")]
 }
   if(type=="BLM"){
     if(!missing(df2)){b<-blmmixfraction(df2);
@@ -816,18 +859,19 @@ if(type=="BLM"){ a<-blmmixfraction(df);
                       b<-b[c(1:4,7:10),] #we *are* ignoring the points on the line.
                       b<-as.data.frame(melt(b,id.vars=4))
                       b<-data.frame(b[b$mixnum==1,],b[b$mixnum==2,])
-                      colnames(b)<-c("mixnum","variable","value1","blah","blah","value2")
-                      sumdf2<-data.frame(amean1=c(mean(b$value1[b$variable=="mixpropA"&b$value1>0]),mean(b$value1[b$variable=="mixpropB"&b$value1>0]),mean(b$value1[b$variable=="mixpropC"&b$value1>0])),
-                                         amean2=c(mean(b$value2[b$variable=="mixpropA"&b$value2>0]),mean(b$value2[b$variable=="mixpropB"&b$value2>0]),mean(b$value2[b$variable=="mixpropC"&b$value2>0])),
-                                         sd1=c(sd(b$value1[b$variable=="mixpropA"&b$value1>0]),sd(b$value1[b$variable=="mixpropB"&b$value1>0]),sd(b$value1[b$variable=="mixpropC"&b$value1>0])),
-                                         sd2=c(sd(b$value2[b$variable=="mixpropA"&b$value2>0]),sd(b$value2[b$variable=="mixpropB"&b$value2>0]),sd(b$value2[b$variable=="mixpropC"&b$value2>0])))
-
+                      colnames(b)<-c("mixnum","Component","value1","blah","blah","value2")
+                      b<-b[,c("Component","value1","value2")]
+                      #sumdf2<-data.frame(amean1=c(mean(b$value1[b$variable=="mixpropA"&b$value1>0]),mean(b$value1[b$variable=="mixpropB"&b$value1>0]),mean(b$value1[b$variable=="mixpropC"&b$value1>0])),
+                      #                   amean2=c(mean(b$value2[b$variable=="mixpropA"&b$value2>0]),mean(b$value2[b$variable=="mixpropB"&b$value2>0]),mean(b$value2[b$variable=="mixpropC"&b$value2>0])),
+                      #                   sd1=c(sd(b$value1[b$variable=="mixpropA"&b$value1>0]),sd(b$value1[b$variable=="mixpropB"&b$value1>0]),sd(b$value1[b$variable=="mixpropC"&b$value1>0])),
+                      #                   sd2=c(sd(b$value2[b$variable=="mixpropA"&b$value2>0]),sd(b$value2[b$variable=="mixpropB"&b$value2>0]),sd(b$value2[b$variable=="mixpropC"&b$value2>0])))
+                    sumdf2<-summarize(group_by(b,Component),amean1=mean(value1),amean2=mean(value2),sd1=sd(value1),sd2=sd(value2))
     }
-    sumdf<-data.frame(amean1=c(mean(a$value1[a$variable=="mixpropA"&a$value1>0]),mean(a$value1[a$variable=="mixpropB"&a$value1>0]),mean(a$value1[a$variable=="mixpropC"&a$value1>0])),
-                      amean2=c(mean(a$value2[a$variable=="mixpropA"&a$value2>0]),mean(a$value2[a$variable=="mixpropB"&a$value2>0]),mean(a$value2[a$variable=="mixpropC"&a$value2>0])),
-                      sd1=c(sd(a$value1[a$variable=="mixpropA"&a$value1>0]),sd(a$value1[a$variable=="mixpropB"&a$value1>0]),sd(a$value1[a$variable=="mixpropC"&a$value1>0])),
-                      sd2=c(sd(a$value2[a$variable=="mixpropA"&a$value2>0]),sd(a$value2[a$variable=="mixpropB"&a$value2>0]),sd(a$value2[a$variable=="mixpropC"&a$value2>0])))
-
+    #sumdf<-data.frame(amean1=c(mean(a$value1[a$variable=="mixpropA"&a$value1>0]),mean(a$value1[a$variable=="mixpropB"&a$value1>0]),mean(a$value1[a$variable=="mixpropC"&a$value1>0])),
+    #                  amean2=c(mean(a$value2[a$variable=="mixpropA"&a$value2>0]),mean(a$value2[a$variable=="mixpropB"&a$value2>0]),mean(a$value2[a$variable=="mixpropC"&a$value2>0])),
+    #                  sd1=c(sd(a$value1[a$variable=="mixpropA"&a$value1>0]),sd(a$value1[a$variable=="mixpropB"&a$value1>0]),sd(a$value1[a$variable=="mixpropC"&a$value1>0])),
+    #                  sd2=c(sd(a$value2[a$variable=="mixpropA"&a$value2>0]),sd(a$value2[a$variable=="mixpropB"&a$value2>0]),sd(a$value2[a$variable=="mixpropC"&a$value2>0])))
+    sumdf<-summarize(group_by(a,Component),amean1=mean(value1),amean2=mean(value2),sd1=sd(value1),sd2=sd(value2))
   }
   #do the plotting
 if(type=="SEQC"){
@@ -873,9 +917,8 @@ if(!missing(df2)&type=="SEQC"){
     merged<-rbind(sumdf,sumdf2)
     merged$mcor<-c(1,1,1,0,0,0)
     g<-ggplot(mergedm)
-    return(g+
-             geom_path(data=pathdf,aes(x,y),col="grey")+geom_path(data=pathdf2,aes(x,y),col="grey")+geom_path(data=pathdf3,aes(x,y),col="grey")+
-             geom_point(aes(x=value1,y=value2,col=variable,alpha=as.factor(mcor)),size=5)+
+    return(g+geom_path(data=pathdf,aes(x,y),col="grey")+geom_path(data=pathdf2,aes(x,y),col="grey")+geom_path(data=pathdf3,aes(x,y),col="grey")+
+             geom_point(aes(x=value1,y=value2,col=Component,alpha=as.factor(mcor)),size=5)+
              xlab("Amount of Tissue in BLM-1")+ylab("Amount of Tissue in BLM-2")+geom_point(aes(x=c(0.25,0.25,.5),y=c(0.25,0.5,0.25)),col="grey70",size=3)+
              theme(legend.position=c(0.6,0.7))+scale_color_manual(name="Tissue",breaks=c("mixpropA","mixpropB","mixpropC","mixpropA","mixpropB","mixpropC"),
             labels=c("Brain","Liver","Muscle","Brain","Liver","Muscle"),values=rep(c("#CC6666","#99CC66","#6699CC"),2))+coord_cartesian(ylim=c(0,1),xlim=c(0,1))+
@@ -885,21 +928,87 @@ if(!missing(df2)&type=="SEQC"){
              theme(aspect.ratio=1)+theme(axis.ticks.margin=unit(x = 0.25,units = "cm"))+theme(axis.text=element_text(size=16)))
   }
   if(missing(df2)&type=="BLM"){
-    a$mcor<-1
     mergedm<-a
     merged<-sumdf
     g<-ggplot(mergedm)
+    #do fun things to add a table: this needs to go into MTP...
+#    dt<-summarize(group_by(mergedm,Component),Observed1=round(mean(value1),digits=3),SD1=round(sd(value1),digits=3),Observed2=round(mean(value2),digits=3),SD2=round(sd(value2),digits=3))
+    dt<-summarize(group_by(mergedm,Component),Observed1=round(mean(value1),digits=3),Observed2=round(mean(value2),digits=3))
+
+levels(dt$Component)<-c("Brain","Liver","Muscle")
+    dt$Designed1=c(.25,.25,.5)
+    dt$Designed2=c(.25,.5,.25)
+    #dt<-dt[,c(1,2,6,3,4,7,5)]
+    dt<-dt[,c(1,2,4,3,5)]
+    #####The actual output i want for the DT table:
+    dt<-as.data.frame(t(dt))
+    colnames(dt)<-c("Brain","Liver","Muscle")
+    dt<-dt[2:length(dt[,1]),]
+    
+    #####/stuff added 4/15####
+#    dt2<-summarize(dt,DistanceFromTruth=round(sqrt(sum(abs(Mix1Mean-Mix1))^2+sum(abs(Mix2Mean-Mix2))^2),digits=3),Xdistance=round(sum(abs(Mix1Mean-Mix1)),digits=3),Ydistance=round(sum(abs(Mix2Mean-Mix2)),digits=3))
+    require(gridExtra)
     pathdf<-NULL;pathdf2<-NULL;pathdf3<-NULL
-    for(I in 1:numrings){pathdf<-rbind(pathdf,circleFun(center=c(0.25,0.25),diameter=0.05*I,npoints=25))
-                         pathdf2<-rbind(pathdf2,circleFun(center=c(0.25,0.5),diameter=0.05*I,npoints=25))
-                         pathdf3<-rbind(pathdf3,circleFun(center=c(0.5,0.25),diameter=0.05*I,npoints=25))
+    #pathdf<-"geom_path(data=circleFun(center=c(0.25,0.25),diameter=0.05,npoints=25),aes(x,y),col=\"grey\")"
+    #pathdf2<-"geom_path(data=circleFun(center=c(0.5,0.25),diameter=0.05,npoints=25),aes(x,y),col=\"grey\")"
+    #pathdf3<-"geom_path(data=circleFun(center=c(0.25,0.5),diameter=0.05,npoints=25),aes(x,y),col=\"grey\")"
+      for(I in 2:numrings){
+      #instead of actually making dfs, make a text block
+    #  pathdf<-paste0(pathdf,"+geom_path(data=circleFun(center=c(0.25,0.25),diameter=",0.05*I,",npoints=25),aes(x,y),col=\"grey\")") # I can't make this work.
+    #  pathdf2<-paste0(pathdf2,"+geom_path(data=circleFun(center=c(0.25,0.5),diameter=",0.05*I,",npoints=25),aes(x,y),col=\"grey\")")
+    #  pathdf3<-paste0(pathdf3,"+geom_path(data=circleFun(center=c(0.5,0.25),diameter=",0.05*I,",npoints=25),aes(x,y),col=\"grey\")")
+      pathdf<-rbind(pathdf,circleFun(center=c(0.25,0.25),diameter=0.05*(I-1),npoints=25))
+                         pathdf2<-rbind(pathdf2,circleFun(center=c(0.25,0.5),diameter=0.05*(I-1),npoints=25))
+                         pathdf3<-rbind(pathdf3,circleFun(center=c(0.5,0.25),diameter=0.05*(I-1),npoints=25))
       }
-    return(g+xlab("Amount of Tissue in BLM-1")+ylab("Amount of Tissue in BLM-2")+geom_path(data=pathdf,aes(x,y),col="grey")+geom_path(data=pathdf2,aes(x,y),col="grey")+geom_path(data=pathdf3,aes(x,y),col="grey")+
-             geom_point(aes(x=c(0.25,0.25,.5),y=c(0.25,0.5,0.25)),col="grey70",size=3)+geom_point(aes(x=value1,y=value2,col=variable),size=5)+theme(legend.position=c(0.6,0.7))+
+    if(dfr==TRUE){return(dt)}
+{#redefine tablegrob 
+  drawDetails.table <- function (x, recording = TRUE) 
+  {
+    lg <- if(!is.null(x$lg)) {
+      x$lg
+    } else {
+      with(x, gridExtra:::makeTableGrobs(as.character(as.matrix(d)), 
+                                         rows, cols, NROW(d), NCOL(d), parse, row.just = row.just, 
+                                         col.just = col.just, core.just = core.just, equal.width = equal.width, 
+                                         equal.height = equal.height, gpar.coretext = gpar.coretext, 
+                                         gpar.coltext = gpar.coltext, gpar.rowtext = gpar.rowtext, 
+                                         h.odd.alpha = h.odd.alpha, h.even.alpha = h.even.alpha, 
+                                         v.odd.alpha = v.odd.alpha, v.even.alpha = v.even.alpha, 
+                                         gpar.corefill = gpar.corefill, gpar.rowfill = gpar.rowfill, 
+                                         gpar.colfill = gpar.colfill))
+    }
+    widthsv <- convertUnit(lg$widths + x$padding.h, "mm", valueOnly = TRUE)
+    heightsv <- convertUnit(lg$heights + x$padding.v, "mm", valueOnly = TRUE)
+    widthsv[1] <- widthsv[1] * as.numeric(x$show.rownames)
+    widths <- unit(widthsv, "mm")
+    heightsv[1] <- heightsv[1] * as.numeric(x$show.colnames)
+    heights <- unit(heightsv, "mm")
+    cells = viewport(name = "table.cells", layout = grid.layout(lg$nrow + 
+                                                                  1, lg$ncol + 1, widths = widths, heights = heights))
+    pushViewport(cells)
+    tg <- gridExtra:::arrangeTableGrobs(lg$lgt, lg$lgf, lg$nrow, lg$ncol, 
+                                        lg$widths, lg$heights, show.colnames = x$show.colnames, 
+                                        show.rownames = x$show.rownames, padding.h = x$padding.h, 
+                                        padding.v = x$padding.v, separator = x$separator, show.box = x$show.box, 
+                                        show.vlines = x$show.vlines, show.hlines = x$show.hlines, 
+                                        show.namesep = x$show.namesep, show.csep = x$show.csep, 
+                                        show.rsep = x$show.rsep)
+    upViewport()
+  }}
+customtable<-tableGrob(dt)
+customtable$lg$lgt[[7]]$gp$col<-"red"
+customtable$lg$lgt[[15]]$gp$col<-"blue"
+
+
+    return(g+xlab("Amount of Tissue in BLM-1")+ylab("Amount of Tissue in BLM-2")+
+             geom_path(data=pathdf,aes(x,y),col="grey")+geom_path(data=pathdf2,aes(x,y),col="grey")+geom_path(data=pathdf3,aes(x,y),col="grey")+
+             geom_point(aes(x=c(0.25,0.25,.5),y=c(0.25,0.5,0.25)),col="grey70",size=3)+geom_point(aes(x=value1,y=value2,col=Component),size=5)+theme(legend.position=c(0.9,0.7))+
              scale_color_manual(name="Tissue",breaks=c("mixpropA","mixpropB","mixpropC"),labels=c("Brain","Liver","Muscle"),values=rep(c("#CC6666","#99CC66","#6699CC"),1))+
              coord_cartesian(ylim=c(0,1),xlim=c(0,1))+theme(axis.text=element_text(size=rel(1.3)))+theme(axis.title=element_text(size=rel(1.5)))+theme(legend.text=element_text(size=rel(1.5)))+
              theme(legend.title=element_text(size=rel(1.5)))+geom_pointrange(data=merged,aes(x=amean1,y=amean2,ymax=amean2+sd2,ymin=amean2-sd2),size=1.15)+
-             geom_errorbarh(data=merged,aes(x=amean1,y=amean2,xmax=amean1+sd1,xmin=amean1-sd1,height=0),size=1.3)+theme(aspect.ratio=1))
+             geom_errorbarh(data=merged,aes(x=amean1,y=amean2,xmax=amean1+sd1,xmin=amean1-sd1,height=0),size=1.3)+theme(aspect.ratio=1)+annotation_custom(customtable,ymin=0.62,xmin=0.48)+coord_cartesian(ylim=c(0,0.75),xlim=c(0,0.75))+
+             scale_x_continuous(breaks=c(0,0.25,0.5,0.75))+scale_y_continuous(breaks=c(0,0.25,0.5,0.75)))
 
   }
 
@@ -1073,6 +1182,7 @@ assignIdentity<-function(dat,index=5,forpub=1,minct=20){
                 dat$identity[dat$lep>index*dat$bep&dat$lep>index*dat$mep&dat$lep>minct]<-"l"
                 dat$identity[dat$mep>index*dat$bep&dat$mep>index*dat$lep&dat$mep>minct]<-"m"
                 dat$identity[grep("ERCC-",dat$gene_id)]<-"x"
+                dat$identity[grep("NIST_",dat$gene_id)]<-"x"
                 if(sum(dat$identity=="x")==0){dat$identity[match(ercc96$V9,dat$gene_id)]<-"x"}
                 #dat$varrat<-(dat$a1-dat$modeled+1)/(dat$modeled+1)
   }
@@ -1082,6 +1192,7 @@ assignIdentity<-function(dat,index=5,forpub=1,minct=20){
     dat$identity[dat$lep>index*dat$bep&dat$lep>index*dat$mep&dat$lep>minct]<-"Liver"
     dat$identity[dat$mep>index*dat$bep&dat$mep>index*dat$lep&dat$mep>minct]<-"Muscle"
     dat$identity[grep("ERCC-",dat$gene_id)]<-"external"
+    dat$identity[grep("NIST_",dat$gene_id)]<-"external"
     if(sum(dat$identity=="x")==0){dat$identity[match(ercc96$V9,dat$gene_id)]<-"external"}
 
   }
@@ -1413,7 +1524,6 @@ mfdb<-function(df){
   outfrac2[,4]<-outfrac[,4]/(outfrac[,1]+outfrac[,2])
   #this normalizes the mRNA content - making the output effectively the A:B ratio
   return(outfrac)}
-
 normcountdf<-function(tdf,normtype){
     if(normtype==0){
     return(tdf)}
@@ -1430,11 +1540,9 @@ normcountdf<-function(tdf,normtype){
   }
   if(normtype=="UQN"){
     library(edgeR)
-    tdf$norm<-"UQN"
     nfac<-c(calcNormFactors(tdf[2:11],method="upperquartile"),calcNormFactors(tdf[12:14],method="upperquartile"))
-    #    nfac<-c(nfac,calcNormFactors(tdf[12:14]))
     for(I in 2:14){tdf[I]<-tdf[I]*nfac[I-1]}
-    return(tdf)
+    return(tdf)  
   }
   if(normtype=="TMM"){
     tdf$norm<-"TMM"
@@ -1459,3 +1567,4 @@ normcountdf<-function(tdf,normtype){
     for(I in 2:14){tdf[I]<-tdf[I]*nfac[I-1]}
     return(tdf)}
   return(0)}
+###End of Helper Functions
