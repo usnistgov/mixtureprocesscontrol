@@ -327,11 +327,17 @@ sf2<-function(){ #stuff i did to compare mix models using by uqn/tmm to that ach
 #Reviewer-Suggested Figures:
 RevS1<-function(){
     #dispersion:
-    g<-ggplot(subset(Figure2,identity!="external"&putativeoutlier!=1));theme_set(theme_bw(base_size=18));g+geom_point(aes(x=log2(a1),y=cv))+xlab("mean expression")
+    g<-makerefmetdfb(norm="UQN")
+    g<-calcmodel(assignIdentity(g))
+    g<-subset(g,identity!="external")
+    g<-g[grep("rRNA",g$gene_id,invert=TRUE),]#get rid of those pesky rRNA genes
+    theme_set(theme_bw(base_size=18))
+
+    ggplot(data=g)+geom_point(aes(x=log2(a1),y=cv))+xlab("mean expression")
     #linearity
-    g+geom_point(aes(x=log2(a1),y=log2(pred1*1603/1374)))+xlab("log counts (observed)")+ylab("log counts(predicted)")
+    ggplot(data=g)+geom_point(aes(x=log2(a1),y=log2(pred1*1603/1374)))+xlab("log counts (observed)")+ylab("log counts(predicted)")
     #deviation from linearity
-    g+geom_point(aes(x=log2(a1),y=log2(pred1*1603/1374)-log2(a1)))+xlab("log counts (observed)")+ylab("deviation from linearity (predicted - observed)")
+    ggplot(data=g)+geom_point(aes(x=log2(a1),y=log2(pred1*1603/1374)-log2(a1)))+xlab("log counts (observed)")+ylab("deviation from linearity (predicted - observed)")
     #note: the 1603/1374 term is simply because the sum of predicted counts isn't equal to the sum of observed counts - it's just a normalizing term for (predicted) library size
 }#"Rich plot of the linearity, dispersion, etc"
 
@@ -1567,4 +1573,48 @@ normcountdf<-function(tdf,normtype){
         for(I in 2:14){tdf[I]<-tdf[I]*nfac[I-1]}
         return(tdf)}
     return(0)}
+calcmodel<-function(dat,rscore=0){
+    ercc<-rownames(dat)[substr(rownames(dat),1,5)=="ERCC-"]
+    if(length(ercc)==0){ety<-2;ercc<-match(ercc96$V9,dat$gene_id);ercc<-ercc[!is.na(ercc)]}
+    if(length(ercc)==0){ety<-1;ercc<-grep("ERCC-",dat$gene_id)}
+    if(length(ercc)==0){return("Sorry, ERROR14 LMAO YOU HAVE NO IDEA WHAT ERROR 14 IS AND NEITHER DO I")}
+    non.ercc<-rownames(dat)[!rownames(dat)%in%ercc]
+    count<-rbind(colSums(dat[ercc,2:14]),colSums(dat[non.ercc,2:14]))
+    ercc.targ<-c(rep(.05*.15,10),rep(.03*.1,3))
+    ercc.targ[grep("d",colnames(count))]<-ercc.targ[grep("d",colnames(count))]/8
+    ercc.targ[grep("u",colnames(count))]<-ercc.targ[grep("u",colnames(count))]*8
+
+    mRNA.frac<-ercc.targ*count[2,]/count[1,]
+    mixFrac1<-c(.25,.25,.5);mixFrac2<-c(.25,.5,.25)
+
+    Ffrac2<- c(mRNA.frac[11]*mixFrac2[1],mRNA.frac[12]*mixFrac2[2],mRNA.frac[13]*mixFrac2[3])/sum(mRNA.frac[11]*mixFrac2[1],mRNA.frac[12]*mixFrac2[2],mRNA.frac[13]*mixFrac2[3])#calc Ffracs
+    Ffrac1<-c(mRNA.frac[11]*mixFrac1[1],mRNA.frac[12]*mixFrac1[2],mRNA.frac[13]*mixFrac1[3])/sum(mRNA.frac[11]*mixFrac1[1],mRNA.frac[12]*mixFrac1[2],mRNA.frac[13]*mixFrac1[3])
+
+    dat$pred2<-(dat$bep*Ffrac2[1])+(dat$lep*Ffrac2[2])+(dat$mep*Ffrac2[3])
+    dat$pred1<-(dat$bep*Ffrac1[1])+(dat$lep*Ffrac1[2])+(dat$mep*Ffrac1[3])
+    dat$fit<-dat$pred2*(sum(dat$b2d)/sum(dat$pred2))/dat$b2d
+    dat$fit[dat$fit==Inf|dat$fit==-Inf]<-1
+    dat$fit[dat$fit==0]<-NA
+    #apply global "normalization"
+    #  sdat<-dat
+    #  sdat<-subset(dat,identity!="x")#remove ERCCs from counts
+    #  for(I in 2:11){sdat[I]<-sdat[I]/(sum(sdat[I])/sum(sdat$pred1))}#calibrate the predicted values to the ERCC-less libraries
+    #  sdat$fit<-sdat$pred1/(rowMeans(sdat[2:7]))
+    #  sdat$fit[sdat$fit==Inf|sdat$fit==-Inf]<-1
+    # sdat$fit[sdat$fit==0]<-NA
+
+    #otherfits need to be calculated to account for transcript isoforms being randomly splattered all over the place...
+
+
+    #  sscore<-round(sum(abs(log2(sdat$fit)),na.rm=TRUE)/sum(!is.na(sdat$fit)),digits=3)
+    #  score<-round(sum(abs(log2(dat$fit)),na.rm=TRUE)/sum(!is.na(dat$fit)),digits=3)
+    #  print(paste("fit quality equals",score,sep=" "))
+
+    if(rscore==1){return(score)}
+    if(rscore==2){return(c(sscore,unname(count[2,9]),unname(count[2,9])/sum(!is.na(sdat$fit))))}
+    else(return(dat))
+
+}
 ###End of Helper Functions
+#random ERCC data frame...
+load("ercc96.rdat")#the ercc96 data frame.
